@@ -1,0 +1,46 @@
+Code1,CLC_level_2,GLOBIOM_UNFCC
+111,Urban Fabric,Urban
+112,Urban Fabric,Urban
+121,"Industrial, commercial and transport units",Urban
+122,"Industrial, commercial and transport units",Urban
+123,"Industrial, commercial and transport units",Urban
+124,"Industrial, commercial and transport units",Urban
+131,"Mine, dump and construction sites",Urban
+132,"Mine, dump and construction sites",Urban
+133,"Mine, dump and construction sites",Urban
+141,Artificial non-agricultural vegetated areas,Urban
+142,Artificial non-agricultural vegetated areas,Urban
+211,Arable land,Cropland
+212,Arable land,Cropland
+213,Arable land,Cropland
+221,Permanent crops,OtherCropland
+222,Permanent crops,OtherCropland
+223,Permanent crops,OtherCropland
+231,Pastures,Pasture
+241,Heterogeneous agricultural areas,OtherCropland
+242,Heterogeneous agricultural areas,OtherCropland
+243,Heterogeneous agricultural areas,OtherCropland
+244,Heterogeneous agricultural areas,OtherCropland
+311,Forests,Forest
+312,Forests,Forest
+313,Forests,Forest
+321,Shrub and/or herbaceous vegetation association,OtherNaturalLand
+322,Shrub and/or herbaceous vegetation association,OtherNaturalLand
+323,Shrub and/or herbaceous vegetation association,OtherNaturalLand
+324,Shrub and/or herbaceous vegetation association,Forest
+331,Open spaces with little or no vegetation,NotRelevant
+332,Open spaces with little or no vegetation,NotRelevant
+333,Open spaces with little or no vegetation,NotRelevant
+334,Open spaces with little or no vegetation,NotRelevant
+335,Open spaces with little or no vegetation,NotRelevant
+411,Inland wetlands,Wetlands
+412,Inland wetlands,Wetlands
+421,Coastal wetlands,MarineWaterBodies
+422,Coastal wetlands,MarineWaterBodies
+423,Coastal wetlands,MarineWaterBodies
+511,Inland waters,InlandWaterBodies
+512,Inland waters,InlandWaterBodies
+521,Marine waters,MarineWaterBodies
+522,Marine waters,MarineWaterBodies
+523,Marine waters,MarineWaterBodies
+999,NODATA,NODATA
