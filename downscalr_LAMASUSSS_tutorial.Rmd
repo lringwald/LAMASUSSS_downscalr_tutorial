@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 
 Before we start with anything, we need to make sure we have some crucial R-packages installed & loaded:
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, message=FALSE}
 require(dplyr)
 require(tidyr)
 ```
@@ -282,11 +282,11 @@ plot
 With this simple rule we can already create some spatial variation across pixels containing our **lu.from** class. But for the sake of illustration some further important concepts of downscaling have been neglected. We turn to them now by introducing downscaling with the `downscalr`-package. 
 
 
-## Introducing the `downscalr`-package
+## Minor detour: Introducing the [`downscalr` package](https://github.com/tkrisztin/downscalr)
 
-The `downscalr` package provides an accessible and user-friendly way to apply the **downscalr** framework for land-use downscaling tasks. The **downscalr** framework bridges the gap between observed **land-use change** (LUC), drivers of LUC, and aggregate LUC targets. One key advantage is its ability to estimate **priors** using an empirical econometric model—if observational data is available. This model links a set of exogenous variables and dynamically updated endogenous variables to observed LUC patterns. In this context, **priors** simply refer to LUC predictions derived from the econometric model based on static and/or dynamic input data.
+The [`downscalr` package](https://github.com/tkrisztin/downscalr) provides an accessible and user-friendly way to apply the **downscalr** framework for land-use downscaling tasks. The **downscalr** framework bridges the gap between observed **land-use change** (LUC), drivers of LUC, and aggregate LUC targets. One key advantage is its ability to estimate **priors** using an empirical econometric model—if observational data is available. This model links a set of exogenous variables and dynamically updated endogenous variables to observed LUC patterns. In this context, **priors** simply refer to LUC predictions derived from the econometric model based on static and/or dynamic input data.
 
-The **downscalr** model is fully compatible with the **GLOBIOM** integrated assessment model, which can generate high-resolution land-use change projections at up to 5 arcminute resolution. *Figure 1* below illustrates the components involved and the overall structure of the downscaling process. It is important to note, however, that aggregate LUC targets to be downscaled do not have to originate from **GLOBIOM**. For example, in this tutorial, we demonstrate the functionality of the `downscalr` package using LUC targets for Argentina obtained from the **FABLE** calculator.
+The **downscalr** model is fully compatible with the **GLOBIOM** integrated assessment model, which can generate high-resolution land-use change projections at up to 5 arcminute resolution. *Figure 1* below illustrates the components involved and the overall structure of the downscaling process. It is important to note, however, that aggregate LUC targets to be downscaled do not have to originate from **GLOBIOM**. For example, in the vignette of the [`downscalr` package](https://github.com/tkrisztin/downscalr), we demonstrate the downscalr routine using LUC targets for Argentina obtained from the **FABLE** calculator.
 ```{r echo=FALSE, fig.align = 'center', out.width = "90%",  fig.cap = "Fig. 1 - Overview of the GLOBIOM downscalr framework"}
 knitr::include_graphics("images/DownScale_Overview_Flowchart.png")
 ```
@@ -324,9 +324,9 @@ transition_data <- readRDS("input/transition_data.rds")
 transition_data <- transition_data %>% rename(ns=EEA_10kmID)
 transition_matrix <- transition_data %>% filter(lu.from %in% c(example_lu.from),
                                                 lu.to %in% c(example_lu.to)) %>%
-                        group_by(ns,lu.from) %>% 
-                         mutate(LUC_share=area_km2/sum(area_km2), 
-                                LUC_share=ifelse(!is.finite(LUC_share),0,LUC_share)) %>% 
+                        group_by(ns,lu.from) %>%
+                         mutate(LUC_share=area_km2/sum(area_km2),
+                                LUC_share=ifelse(!is.finite(LUC_share),0,LUC_share)) %>%
                             select(!area_km2) %>%
                               pivot_wider(names_from=lu.to,values_from=LUC_share) %>%
                                 mutate(no_choice=1-rowSums(across(example_lu.to))) %>%
@@ -336,7 +336,7 @@ transition_matrix <- transition_data %>% filter(lu.from %in% c(example_lu.from),
 X_input <- readRDS("input/X_input_n2k.rds")
 
 
-Y <- transition_matrix %>% 
+Y <- transition_matrix %>%
             dplyr::select(-c(times))
 
 X <- X_input %>%
@@ -351,24 +351,24 @@ The MNL function requires the data input to be in matrix format. Further note, t
 ```{r results = "hide", message=FALSE}
 #Compute MNL model with standard settings
 Y.temp <- Y %>% filter(lu.from %in% example_lu.from) %>% select(-c(lu.from))
-Y.temp <- Y.temp[match(X$ns,Y.temp$ns),] %>% select(-ns) %>% as.matrix() 
+Y.temp <- Y.temp[match(X$ns,Y.temp$ns),] %>% select(-ns) %>% as.matrix()
 # here we ensure the response IDs match predictor row IDs
 X.temp <- X %>% select(-ns) %>% as.matrix()
 baseline <- which(colnames(Y.temp) == example_lu.from)
-# Decreased niter = 100 and nburn = 50 for faster computation 
-results_MNL <- mnlogit(X.temp, 
-                       Y.temp, 
-                       baseline, 
-                       niter = 100, 
-                       nburn = 50, 
+# Decreased niter = 100 and nburn = 50 for faster computation
+results_MNL <- mnlogit(X.temp,
+                       Y.temp,
+                       baseline,
+                       niter = 100,
+                       nburn = 50,
                        A0 = 10^4)
-# Strongly recommended if you have more time: 
+# Strongly recommended if you have more time:
 # results_MNL <- mnlogit(as.matrix(X), as.matrix(Y), baseline, niter = 3000, nburn = 1500, A0 = 10^4)
 ```
 
 Stored in `results_MNL` (apart from inputs X,Y & baseline) are the after burn-in posterior draws for the MNL model coefficients (and if selected corresponding marginal effects). And that\`s basically it, we now have everything we want out of the Prior module and are able to proceed.
 
-### Downscale module
+### Back on track: downscale module
 
 In this step we return to the beginning of this tutorial, our country-level  **LUC Targets** as obtained from *GLOBIOM*. For ease of demonstration, we limit the downscaling scope to target projections corresponding to the year 2010 and as the target country Austria.
 
@@ -378,12 +378,12 @@ For now we focus only on one time step, hence this functionality is obsolete. Ye
 
 #### Downscale module: preliminaries
 
-In the code chunk below we prepare the data for the downscaling step of our simple exercise. In its most basic form we essentially require only 4 inputs to the `downscalr::downscale()` function: 
+In the code chunk below we prepare the data for the downscaling step of our simple exercise. In its most basic form we essentially require only 4 inputs to the `downscalr::downscale()` function:
 
-- The  **LUC targets** we discussed already. And as previously, we focus origin class *OtherNaturalLand*, however, this time we allow transitions all other possible LU classes as projected for the year 2010 by our reference *GLOBIOM* run for Austria 
+- The  **LUC targets** we discussed already. And as previously, we focus origin class *OtherNaturalLand*, however, this time we allow transitions all other possible LU classes as projected for the year 2010 by our reference *GLOBIOM* run for Austria
 - Our **Start Map** of LU areas as the canvas for `downscalr::downscale()` function to allocate our **LUC targets** from above onto. What we haven't mentioned explicitly before: the start map also presents upper and lower bounds of possible transitions per pixel, but also on aggregate.
 - A summary measure of **parameter estimates** from our prior module which guide the spatial distribution of the **LUC targets** on the **start map**. This can be replaced or augmented by purely exogenous prior information.
-- Lastly, the **design matrix $X$** which entered the prior estimation and complements the **parameter estimates** data to obtain prior predictions. 
+- Lastly, the **design matrix $X$** which entered the prior estimation and complements the **parameter estimates** data to obtain prior predictions.
 
 Moreover, compute mean of coefficient posterior draws and transform data matrix X and mean coefficient matrix to long format required by function `downscale()`.
 
@@ -391,36 +391,37 @@ Moreover, compute mean of coefficient posterior draws and transform data matrix 
 # Set example year of downscaling target. e.g. 2010
 example_times <- 2010
 
-# Subset LUC targets 
+# Subset LUC targets
 LUC_targets_example <- LUC_targets %>% filter(Ns=="Austria",
                                               times==2010,
-                                              lu.from %in% example_lu.from, 
+                                              lu.from %in% example_lu.from,
                                               lu.to %in% example_lu.to) %>%
                         select(!Ns)
 
 ## starting area should provide information on area of each (higher resolution) grid cell, i.e ns
-start_map_example <- start_map %>% rename(ns=EEA_10kmID, 
+start_map_example <- start_map %>% rename(ns=EEA_10kmID,
                                           value=area_km2,
-                                          lu.from=GLOBIOM_UNFCC) %>% 
-                      select(!c(x_10km,y_10km,Ns)) %>% 
-                        mutate(ns=as.character(ns)) 
-                        
+                                          lu.from=GLOBIOM_UNFCC) %>%
+                      select(!c(x_10km,y_10km,Ns)) %>%
+                        mutate(ns=as.character(ns))
+
 
 start_map_example[is.na(start_map_example)] <- 0
 
-## prior oefficients: compute mean of posterior draws & pivot to long format  
+## prior oefficients: compute mean of posterior draws & pivot to long format
 beta_hat_mean <- apply(results_MNL$postb[,-baseline,],c(1,2),mean)
 
-beta_hat_mean_long <- beta_hat_mean %>% as.data.frame() %>% 
+beta_hat_mean_long <- beta_hat_mean %>% as.data.frame() %>%
                        tibble::rownames_to_column(var="ks") %>%
-                        tidyr::pivot_longer(!ks, names_to = "lu.to", 
-                                            values_to="value") %>% 
-                          dplyr::arrange(lu.to) %>% 
-                            tibble::add_column(lu.from=example_lu.from, 
+                        tidyr::pivot_longer(!ks, names_to = "lu.to",
+                                            values_to="value") %>%
+                          dplyr::arrange(lu.to) %>%
+                            tibble::add_column(lu.from=example_lu.from,
                                                .after="ks")
 
 # pivot explanatory input data into long format
-X_long <-  X %>% tidyr::pivot_longer(!ns, names_to="ks", 
+X_long <-  X %>% # we have to create the intercept column
+             tidyr::pivot_longer(!ns, names_to="ks",
                                      values_to = "value") %>%
             filter(ns %in% unique(start_map_example$ns))
 
@@ -434,9 +435,9 @@ Lastly, given the example settings all remaining inputs to the downscale functio
 
 ```{r message=FALSE}
 
-results_DS <- downscalr::downscale(targets = LUC_targets_example, 
-                                   start.areas =  start_map_example, 
-                                   xmat = X_long, 
+results_DS <- downscalr::downscale(targets = LUC_targets_example,
+                                   start.areas =  start_map_example,
+                                   xmat = X_long,
                                    betas = beta_hat_mean_long)
 ####summary and print of downscalr output object
 summary(results_DS)
@@ -444,20 +445,20 @@ print(results_DS)
 
 ```
 
-That's it! You successfully downscaled LUC from *Cropland** in Argentina from  projections for the year 2010. The results are stored in `results_DS`. Let's see how the transition **OtherNaturalLand** to **Pasture** from the beginning is allocated now:
+That's it! The results are stored in `results_DS`. Let's see how the transition **OtherNaturalLand** to **Pasture** from the beginning is allocated now:
 
 ```{r message=FALSE}
 
-downscalr_downscale_res <- results_DS$out.res %>% 
-                            left_join(resolution_mapping %>% 
-                              mutate(ns=as.character(EEA_10kmID)) %>% 
-                              select(ns,x_10km,y_10km) %>% distinct(), by="ns") %>%     
+downscalr_downscale_res <- results_DS$out.res %>%
+                            left_join(resolution_mapping %>%
+                              mutate(ns=as.character(EEA_10kmID)) %>%
+                              select(ns,x_10km,y_10km) %>% distinct(), by="ns") %>%
                                 filter(value!=0,
                                        lu.from=="OtherNaturalLand",
                                        lu.to=="Pasture")
 
 plot <- ggplot() +
-  geom_tile(data =  downscalr_downscale_res, 
+  geom_tile(data =  downscalr_downscale_res,
             aes(x = x_10km, y = y_10km, fill = value)) +
   scale_fill_gradient(
     low = "lightyellow", high = "saddlebrown", na.value = "grey"
@@ -466,7 +467,7 @@ plot <- ggplot() +
     fill = "area_km2"
   ) +
   geom_sf(data = Ns_shp, fill = NA, colour = "black", size = 50, lwd = .5) +
-  coord_sf(xlim = c(extent["xmin"], extent["xmax"]), 
+  coord_sf(xlim = c(extent["xmin"], extent["xmax"]),
            ylim = c(extent["ymin"], extent["ymax"])) +
   theme_bw(base_size = 18)
 
@@ -586,8 +587,7 @@ results_DS <- downscalr::downscale(targets = LUC_targets_example,
 summary(results_DS)
 print(results_DS)
 
-# plot <- LUC_plot(results_DS, argentina_raster)
-# plot$LUC.plot
+
 ```
 
 Let's plot a different transition and at another time step.
@@ -685,51 +685,82 @@ plot
 
 
 
-#### The role of exogenous priors
+<!-- #### The role of exogenous priors -->
 
-Let's rerun the downscaling from before, however, with a minor tweak to the subset selection of our **LUC targets**.
+<!-- Let's rerun the downscaling from before, however, with a minor tweak to the subset selection of our **LUC targets**. -->
 
-```{r eval=FALSE}
-LUC_targets_example <- LUC_targets %>% filter(Ns=="Austria",
-                                              lu.from %in% example_lu.from) %>%
-                          select(!Ns)
+<!-- ```{r eval=FALSE} -->
+<!-- LUC_targets_example <- LUC_targets %>% filter(Ns=="Austria", -->
+<!--                                               lu.from %in% example_lu.from) %>% -->
+<!--                           select(!Ns) -->
 
 
-results_DS <- downscalr::downscale(targets = LUC_targets_example, 
-                                    start.areas =  start_map_example, 
-                                    xmat = X_long, 
-                                    betas = beta_hat_mean_long,
-                                    restrictions=n2k_restrictions_sub)
-####summary and print of downscalr output object
-summary(results_DS)
-print(results_DS)
+<!-- results_DS <- downscalr::downscale(targets = LUC_targets_example,  -->
+<!--                                     start.areas =  start_map_example,  -->
+<!--                                     xmat = X_long,  -->
+<!--                                     betas = beta_hat_mean_long, -->
+<!--                                     restrictions=n2k_restrictions_sub) -->
+<!-- ####summary and print of downscalr output object -->
+<!-- summary(results_DS) -->
+<!-- print(results_DS) -->
 
-```
+<!-- ``` -->
 
-Now we should encounter an error telling us we are essentially missing prior information for one or more transitions or, more specifically, for one LU class: **Short Rotation Plantation** (SRP). This type of LUM describes a forestry practice where fast-growing tree species are cultivated in high densities, typically harvested every 2-20 years. These plantations are primarily used for biomass production, including energy (biomass fuel), fiber (pulp for paper), and other industrial uses. However, this practice is not in observed in our dataset. So we have to introduce exogenous priors.
+<!-- Now we should encounter an error telling us we are essentially missing prior information for one or more transitions or, more specifically, for one LU class: **Short Rotation Plantation** (SRP). This type of LUM describes a forestry practice where fast-growing tree species are cultivated in high densities, typically harvested every 2-20 years. These plantations are primarily used for biomass production, including energy (biomass fuel), fiber (pulp for paper), and other industrial uses. However, this practice is not in observed in our dataset. So we have to introduce exogenous priors. -->
 
-#### Adding exogenous priors
+<!-- #### Adding exogenous priors -->
 
-```{r message=FALSE}
-# load the protection data set
-SRP_prior <- readRDS("input/SRP_prior_LAMASUSSS.rds")
-head(SRP_prior)
-```
+<!-- ```{r message=FALSE} -->
+<!-- # load the exogenous priors -->
+<!-- SRP_prior <- readRDS("input/SRP_prior_LAMASUSSS.rds")  -->
+<!-- head(SRP_prior) -->
+<!-- ``` -->
 
-Now, let's rerun our downscaling with the exogeneous SRP priors as input.
+<!-- <!-- Now, let's rerun our downscaling with the exogeneous SRP priors as input. --> -->
 
-```{r message=FALSE}
+<!-- ```{r message=FALSE} -->
 
-### Prepare inputs for downscale function
-# subset priors to Austria
-SRP_prior_sub <- SRP_prior %>% filter(ns %in% unique(start_map_example$ns))
-results_DS <- downscalr::downscale(targets = LUC_targets_example,
-                                    start.areas =  start_map_example,
-                                    xmat = X_long,
-                                    betas = beta_hat_mean_long,
-                                    priors = SRP_prior_sub,
-                                    restrictions=n2k_restrictions_sub)
-####summary and print of downscalr output object
-summary(results_DS)
-print(results_DS)
-```
+<!-- ### Prepare inputs for downscale function -->
+<!-- # subset priors to Austria -->
+<!-- SRP_prior_sub <- SRP_prior %>% filter(ns %in% unique(X_long$ns)) -->
+<!-- results_DS <- downscalr::downscale( targets = LUC_targets_example, -->
+<!--                                     start.areas =  start_map_example, -->
+<!--                                     xmat = X_long, -->
+<!--                                     betas = beta_hat_mean_long, -->
+<!--                                     priors = SRP_prior_sub, -->
+<!--                                     restrictions=n2k_restrictions_sub) -->
+<!-- ####summary and print of downscalr output object -->
+<!-- summary(results_DS) -->
+<!-- print(results_DS) -->
+<!-- ``` -->
+<!-- Finally, we plot the transition based on an exogeneous prior input -->
+
+<!-- ```{r eval=TRUE} -->
+
+<!-- downscalr_downscale_res <- results_DS$out.res %>%  -->
+<!--                             left_join(resolution_mapping %>%  -->
+<!--                                         mutate(ns=as.character(EEA_10kmID)) %>%  -->
+<!--                                         select(ns,x_10km,y_10km) %>% distinct(),  -->
+<!--                                         by="ns") %>%  -->
+<!--                               filter(value!=0, -->
+<!--                                      lu.from=="OtherNaturalLand", -->
+<!--                                      lu.to=="ShortRotationPlantation", times==2050) -->
+
+<!-- plot <- ggplot() + -->
+<!--   geom_tile(data =  downscalr_downscale_res,  -->
+<!--             aes(x = x_10km, y = y_10km, fill = value)) + -->
+<!--   scale_fill_gradient( -->
+<!--     low = "lightyellow", high = "darkgreen", na.value = "grey" -->
+<!--   ) + -->
+<!--    labs( -->
+<!--     fill = "area_km2" -->
+<!--   ) + -->
+<!--   geom_sf(data = Ns_shp, fill = NA, colour = "black", size = 50, lwd = .5) + -->
+<!--   coord_sf(xlim = c(extent["xmin"], extent["xmax"]), -->
+<!--            ylim = c(extent["ymin"], extent["ymax"])) + -->
+<!--   theme_bw(base_size = 18) -->
+
+<!-- plot -->
+
+<!-- ``` -->
+
